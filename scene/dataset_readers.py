@@ -114,8 +114,8 @@ def readColmapCamerasDynerf(cam_extrinsics, cam_intrinsics, images_folder, near,
         width = intr.width / 2
 
         for j in range(startime, startime+int(duration)):
-            image_path = os.path.join(images_folder,f"images/{extr.name[:-4]}", "%04d.png" % j)
-            image_name = os.path.join(f"{extr.name[:-4]}", image_path.split('/')[-1])
+            image_path = os.path.join(images_folder, "frames", f"{j:04d}", extr.name)
+            image_name = image_path.split('/')[-1]
 
             assert os.path.exists(image_path), "Image {} does not exist!".format(image_path)
             if j == startime:
@@ -260,13 +260,13 @@ def storePly(path, xyz, rgb):
 
 def readColmapSceneInfoDynerf(path, images, eval, duration=300, testonly=None):
     try:
-        cameras_extrinsic_file = os.path.join(path, "colmap/dense/workspace/sparse", "images.bin")
-        cameras_intrinsic_file = os.path.join(path, "colmap/dense/workspace/sparse", "cameras.bin")
+        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
+        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
         cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
     except:
-        cameras_extrinsic_file = os.path.join(path, "colmap/dense/workspace/sparse", "images.txt")
-        cameras_intrinsic_file = os.path.join(path, "colmap/dense/workspace/sparse", "cameras.txt")
+        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.txt")
+        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
@@ -275,25 +275,22 @@ def readColmapSceneInfoDynerf(path, images, eval, duration=300, testonly=None):
 
     cam_infos_unsorted = readColmapCamerasDynerf(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=path, near=near, far=far, duration=duration)    
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
-     
-    train_cam_infos = [_ for _ in cam_infos if "cam00" not in _.image_name]
-    test_cam_infos = [_ for _ in cam_infos if "cam00" in _.image_name]
-
-    uniquecheck = []
-    for cam_info in test_cam_infos:
-        if cam_info.image_name[:5] not in uniquecheck:
-            uniquecheck.append(cam_info.image_name[:5])
-    assert len(uniquecheck) == 1 
     
-    sanitycheck = []
-    for cam_info in train_cam_infos:
-        if  cam_info.image_name[:5] not in sanitycheck:
-            sanitycheck.append( cam_info.image_name[:5])
-    for testname in uniquecheck:
-        assert testname not in sanitycheck
+    test_cams = [0] # NEVD is [0],vru is []
+    slices = [slice(n * duration, (n + 1) * duration) for n in test_cams]
+    sliced_infos = [cam_infos[s] for s in slices]
+    from itertools import chain
+    test_cam_infos = list(chain(*sliced_infos))
+
+    excluded_indices = set()
+    for s in slices:
+        excluded_indices.update(range(s.start, s.stop))
+
+    train_cam_infos = [cam for i, cam in enumerate(cam_infos) if i not in excluded_indices]
+    
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
-    ply_path = os.path.join(path, "points3D_downsample.ply")
+    ply_path = os.path.join(path, "sparse/0/points3D.ply")
     
     if not testonly:
         try:

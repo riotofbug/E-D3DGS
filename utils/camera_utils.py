@@ -106,8 +106,8 @@ def loadCamv2(args, id, cam_info, resolution_scale):
     cameradirect = cam_info.hpdirecitons
     camerapose = cam_info.pose 
 
-    cam_no = int(os.path.dirname(cam_info.image_path).split('/')[-1][3:])
-    frame_no = int(cam_info.image_name.split('/')[-1][:-4])
+    cam_no = int(cam_info.image_path.split('/')[-1][3:-4])
+    frame_no = int(cam_info.image_path.split('/')[-2])
 
     if camerapose is not None:
         rays_o, rays_d = 1, cameradirect
