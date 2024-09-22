@@ -176,13 +176,13 @@ def getProjectionMatrix(znear, zfar, fovX, fovY): #ndc to
 #     P[2, 2] = z_sign * zfar / (zfar - znear)
 #     P[2, 3] = -(zfar * znear) / (zfar - znear)
 #     return P
-
+'''
 def getProjectionMatrixCV(znear, zfar, fovX, fovY, cx=0.0, cy=0.0):
-    '''
+    
     cx and cy range is -0.5 to 0.5  
     we use cx cy range -0.5 * 0.5
+
     
-    '''
     tanHalfFovY = math.tan(fovY / 2)
     tanHalfFovX = math.tan(fovX / 2)
 
@@ -226,8 +226,30 @@ def getProjectionMatrixCV(znear, zfar, fovX, fovY, cx=0.0, cy=0.0):
 
     P[2, 3] = -(zfar * znear) / (zfar - znear)
     return P
+'''
+def getProjectionMatrixCV(znear, zfar, fovX, fovY, nd_cx=None, nd_cy=None):
+    tanHalfFovY = math.tan((fovY / 2))
+    tanHalfFovX = math.tan((fovX / 2))
 
+    top = tanHalfFovY * znear
+    bottom = -top
+    right = tanHalfFovX * znear
+    left = -right
+    offsetX = 0 if nd_cx is None else 2 * nd_cx - 1
+    offsetY = 0 if nd_cy is None else 2 * nd_cy - 1
 
+    P = torch.zeros(4, 4)
+
+    z_sign = 1.0
+
+    P[0, 0] = 2.0 * znear / (right - left)
+    P[1, 1] = 2.0 * znear / (top - bottom)
+    P[0, 2] = (right + left) / (right - left) + offsetX
+    P[1, 2] = (top + bottom) / (top - bottom) + offsetY
+    P[3, 2] = z_sign
+    P[2, 2] = z_sign * zfar / (zfar - znear)
+    P[2, 3] = -(zfar * znear) / (zfar - znear)
+    return P
 
 def fov2focal(fov, pixels):
     return pixels / (2 * math.tan(fov / 2))

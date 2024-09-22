@@ -23,7 +23,7 @@ from PIL import Image
 class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
                  image_name, uid,
-                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", near=0.01, far=100.0, timestamp=0.0, rayo=None, rayd=None, rays=None, cxr=0.0,cyr=0.0,
+                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", near=0.01, far=100.0, timestamp=0.0, rayo=None, rayd=None, rays=None, cx=None,cy=None,
                  cam_no=None, frame_no=None, image_path=None, img_wh=None):
         super(Camera, self).__init__()
 
@@ -75,19 +75,18 @@ class Camera(nn.Module):
         
 
 
-        self.zfar = 100.0
-        self.znear = 0.01  
+        self.zfar = far
+        self.znear = near
 
         self.trans = trans
         self.scale = scale
         
         self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1).cuda()
-        if cyr != 0.0 :
-            self.cxr = cxr
-            self.cyr = cyr
-            self.projection_matrix = getProjectionMatrixCV(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy, cx=cxr, cy=cyr).transpose(0,1).cuda()
-        else:
-            self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
+        self.cx = cx
+        self.cy = cy
+        nd_cx = None if self.cx is None else self.cx / self.img_wh[0]
+        nd_cy = None if self.cy is None else self.cy / self.img_wh[1]
+        self.projection_matrix = getProjectionMatrixCV(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy, nd_cx=nd_cx, nd_cy=nd_cy).transpose(0,1).cuda()
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
 
@@ -150,7 +149,7 @@ class MiniCam:
 class Camerass(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
                  image_name, uid,
-                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", near=0.01, far=100.0, timestamp=0.0, rayo=None, rayd=None, rays=None, cxr=0.0,cyr=0.0,
+                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", near=0.01, far=100.0, timestamp=0.0, rayo=None, rayd=None, rays=None, cx=None,cy=None,
                  ):
         super(Camerass, self).__init__()
 
@@ -184,24 +183,20 @@ class Camerass(nn.Module):
         else:
             self.image_width = image[0] 
             self.image_height = image[1] 
-            self.original_image = None
-        
-        self.image_width = 2 * self.image_width
-        self.image_height = 2 * self.image_height # 
+            self.original_image = None 
 
-        self.zfar = 100.0
-        self.znear = 0.01  
+        self.zfar = far
+        self.znear = near 
         self.trans = trans
         self.scale = scale
 
         # w2c 
         self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1).cuda()
-        if cyr != 0.0 :
-            self.cxr = cxr
-            self.cyr = cyr
-            self.projection_matrix = getProjectionMatrixCV(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy, cx=cxr, cy=cyr).transpose(0,1).cuda()
-        else:
-            self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
+        self.cx = cx
+        self.cy = cy
+        nd_cx = None if self.cx is None else self.cx / self.image_width
+        nd_cy = None if self.cy is None else self.cy / self.image_height
+        self.projection_matrix = getProjectionMatrixCV(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy, nd_cx=nd_cx, nd_cy=nd_cy).transpose(0,1).cuda()
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
 

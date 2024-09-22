@@ -118,7 +118,7 @@ def loadCamv2(args, id, cam_info, resolution_scale):
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
                   image=gt_image, gt_alpha_mask=loaded_mask,
-                  image_name=cam_info.image_name, uid=id, data_device='cpu', near=cam_info.near, far=cam_info.far, timestamp=cam_info.timestamp, rayo=rays_o, rayd=rays_d,cxr=cam_info.cxr,cyr=cam_info.cyr,
+                  image_name=cam_info.image_name, uid=id, data_device='cpu', near=cam_info.near, far=cam_info.far, timestamp=cam_info.timestamp, rayo=rays_o, rayd=rays_d,cx=cam_info.cx,cy=cam_info.cy,
                   cam_no=cam_no, frame_no=frame_no, image_path=cam_info.image_path, img_wh=resolution)
 
 
@@ -170,7 +170,7 @@ def loadCamHyper(args, id, cam_info, resolution_scale):
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
                   image=gt_image, gt_alpha_mask=loaded_mask,
-                  image_name=cam_info.image_name, uid=id, data_device='cpu', near=cam_info.near, far=cam_info.far, timestamp=cam_info.timestamp, rayo=rays_o, rayd=rays_d,cxr=cam_info.cxr,cyr=cam_info.cyr,
+                  image_name=cam_info.image_name, uid=id, data_device='cpu', near=cam_info.near, far=cam_info.far, timestamp=cam_info.timestamp, rayo=rays_o, rayd=rays_d,cx=cam_info.cx,cy=cam_info.cy,
                   cam_no=cam_no, frame_no=frame_no)
 
 

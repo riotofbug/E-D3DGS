@@ -46,8 +46,8 @@ class CameraInfo(NamedTuple):
     timestamp: float
     pose: np.array 
     hpdirecitons: np.array
-    cxr: float
-    cyr: float
+    cx: float
+    cy: float
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -100,18 +100,18 @@ def readColmapCamerasDynerf(cam_extrinsics, cam_intrinsics, images_folder, near,
 
         if intr.model=="SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]
-            FovY = focal2fov(focal_length_x / 2, height / 2)
-            FovX = focal2fov(focal_length_x / 2, width / 2)
+            FovY = focal2fov(focal_length_x, height)
+            FovX = focal2fov(focal_length_x, width)
         elif intr.model=="PINHOLE":
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1] 
-            FovY = focal2fov(focal_length_y / 2, height / 2)
-            FovX = focal2fov(focal_length_x / 2, width / 2)
+            FovY = focal2fov(focal_length_y, height)
+            FovX = focal2fov(focal_length_x, width)
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
-
-        height = intr.height / 2
-        width = intr.width / 2
+        
+        height = intr.height
+        width = intr.width
 
         for j in range(startime, startime+int(duration)):
             image_path = os.path.join(images_folder, "frames", f"{j:04d}", extr.name)
@@ -121,10 +121,10 @@ def readColmapCamerasDynerf(cam_extrinsics, cam_intrinsics, images_folder, near,
             if j == startime:
                 image = Image.open(image_path)
                 image = image.resize((int(width), int(height)), Image.LANCZOS)
-                cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, image_path=image_path, image_name=image_name, width=width, height=height, near=near, far=far, timestamp=(j-startime)/duration, pose=1, hpdirecitons=1,cxr=0.0, cyr=0.0)
+                cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, image_path=image_path, image_name=image_name, width=width, height=height, near=near, far=far, timestamp=(j-startime)/duration, pose=1, hpdirecitons=1,cx=intr.params[-2], cy=intr.params[-1])
             else:
                 image = None
-                cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, image_path=image_path, image_name=image_name, width=width, height=height, near=near, far=far, timestamp=(j-startime)/duration, pose=None, hpdirecitons=None, cxr=0.0, cyr=0.0)
+                cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, image_path=image_path, image_name=image_name, width=width, height=height, near=near, far=far, timestamp=(j-startime)/duration, pose=None, hpdirecitons=None, cx=intr.params[-2], cy=intr.params[-1])
             cam_infos.append(cam_info)
     sys.stdout.write('\n')
     return cam_infos
@@ -259,6 +259,7 @@ def storePly(path, xyz, rgb):
 
 
 def readColmapSceneInfoDynerf(path, images, eval, duration=300, testonly=None):
+    dataset_type = "panotic_sports"
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -269,14 +270,22 @@ def readColmapSceneInfoDynerf(path, images, eval, duration=300, testonly=None):
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
-
-    near = 0.01
+    if dataset_type == "panotic_sports":
+        near = 1
+    else:
+        near = 0.01
     far = 100
 
     cam_infos_unsorted = readColmapCamerasDynerf(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=path, near=near, far=far, duration=duration)    
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
-    
-    test_cams = [0] # NEVD is [0],vru is []
+    if dataset_type == "panotic_sports":
+        test_cams = [0, 10, 15, 30] # NEVD is [0],vru is [0, 10, 20, 30],plen is [0, 10, 15, 30]
+    elif dataset_type == "dynerf":
+        test_cams = [0]
+    elif dataset_type == "vru":
+        test_cams = [0, 10, 20, 30]
+    else:
+        return
     slices = [slice(n * duration, (n + 1) * duration) for n in test_cams]
     sliced_infos = [cam_infos[s] for s in slices]
     from itertools import chain
@@ -322,7 +331,7 @@ def readColmapSceneInfoTechnicolor(path, images, eval, duration=None, testonly=N
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
-    near = 0.01
+    near = 1
     far = 100
 
     if testonly:
