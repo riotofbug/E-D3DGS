@@ -276,7 +276,7 @@ def readColmapSceneInfoDynerf(path, images, eval, duration=300, testonly=None):
     cam_infos_unsorted = readColmapCamerasDynerf(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=path, near=near, far=far, duration=duration)    
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
     
-    test_cams = [0] # NEVD is [0],vru is []
+    test_cams = [0, 10, 20, 30] # NEVD is [0],vru is []
     slices = [slice(n * duration, (n + 1) * duration) for n in test_cams]
     sliced_infos = [cam_infos[s] for s in slices]
     from itertools import chain

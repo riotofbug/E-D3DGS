@@ -29,8 +29,8 @@ def readImages(renders_dir, gt_dir):
         render = Image.open(renders_dir / fname)
         gt = Image.open(gt_dir / fname)
         
-        renders.append(tf.to_tensor(render).unsqueeze(0)[:, :3, :, :].cuda())
-        gts.append(tf.to_tensor(gt).unsqueeze(0)[:, :3, :, :].cuda())
+        renders.append(tf.to_tensor(render).unsqueeze(0)[:, :3, :, :])
+        gts.append(tf.to_tensor(gt).unsqueeze(0)[:, :3, :, :])
         image_names.append(fname)
     return renders, gts, image_names
 
@@ -71,10 +71,10 @@ def evaluate(model_paths, test_paths):
             lpips_alexs = []
 
             for idx in tqdm(range(len(renders)), desc="Metric evaluation progress"):
-                ssims.append(ssim(renders[idx], gts[idx])[0])
-                psnrs.append(psnr(renders[idx], gts[idx]))
-                lpips_vggs.append(lpips(renders[idx], gts[idx], net_type='vgg'))
-                lpips_alexs.append(lpips(renders[idx], gts[idx], net_type='alex'))
+                ssims.append(ssim(renders[idx].cuda(), gts[idx].cuda())[0])
+                psnrs.append(psnr(renders[idx].cuda(), gts[idx].cuda()))
+                lpips_vggs.append(lpips(renders[idx].cuda(), gts[idx].cuda(), net_type='vgg'))
+                lpips_alexs.append(lpips(renders[idx].cuda(), gts[idx].cuda(), net_type='alex'))
 
             print("Scene: ", scene_dir,  "SSIM : {:>12.7f}".format(torch.tensor(ssims).mean(), ".5"))
             print("Scene: ", scene_dir,  "PSNR : {:>12.7f}".format(torch.tensor(psnrs).mean(), ".5"))

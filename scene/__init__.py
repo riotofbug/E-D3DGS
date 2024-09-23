@@ -43,7 +43,7 @@ class Scene:
         self.train_cameras = {}
         self.test_cameras = {}
         self.video_cameras = {}
-        resolution_scales= [1.0]
+        resolution_scales= [1.0, 2.0]
         raydict = {}
 
         if loader == "dynerf":
