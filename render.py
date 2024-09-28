@@ -43,14 +43,19 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     
     count = 0
     total_time = 0
+    start = torch.cuda.Event(enable_timing=True)
+    end = torch.cuda.Event(enable_timing=True)
     
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
         if type(view.original_image) == type(None):
             view.load_image()
-        time1 = time()
+        start.record()
+        torch.cuda.synchronize()
         rendering = render(view, gaussians, pipeline, background, iter=iteration, num_down_emb_c=num_down_emb_c, num_down_emb_f=num_down_emb_f)["render"]
-        time2 = time()
-        total_time += (time2 - time1)
+        end.record()
+        torch.cuda.synchronize()
+        elapsed_time = start.elapsed_time(end)
+        total_time += elapsed_time
         render_images.append(to8b(rendering).transpose(1,2,0))
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(count) + ".png"))
         # render_list.append(rendering)
@@ -61,7 +66,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
             # gt_list.append(gt)
         count +=1
         
-    print("FPS:",(len(views)-1)/total_time)
+    print("FPS:",count/total_time*1000)
     
     # count = 0
     # print("writing training images.")
@@ -76,7 +81,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     #         torchvision.utils.save_image(image, os.path.join(render_path, '{0:05d}'.format(count) + ".png"))
     #         count +=1
     
-    imageio.mimwrite(os.path.join(model_path, name, "ours_{}".format(iteration), 'video_rgb.mp4'), render_images, fps=30, quality=8)
+    imageio.mimwrite(os.path.join(model_path, name, "ours_{}".format(iteration), 'video_rgb.mp4'), render_images, fps=25, quality=8)
 
 
 def render_sets(dataset : ModelParams, hyperparam, opt, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, skip_video: bool):
